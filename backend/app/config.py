@@ -1,10 +1,11 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
+import os
 
 
 class Settings(BaseSettings):
-    database_url: str
-    github_token: str
+    database_url: str = "sqlite:///:memory:"
+    github_token: str = "test_token"
     environment: str = "development"
     api_rate_limit_safety_threshold: int = 500
     deep_analysis_max_requests_per_run: int = 5000
@@ -20,8 +21,7 @@ class Settings(BaseSettings):
     max_age_months: int = 24
     max_days_since_push: int = 90
 
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 
 settings = Settings()
