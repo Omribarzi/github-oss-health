@@ -26,36 +26,60 @@ Analyzes public GitHub repositories that meet ALL:
 
 ## Development Status
 
-Current milestone: **M3** (Dashboard & API)
+Current milestone: **M5** (Docker + Tests + CI)
 
 ## Milestones
 
 - [x] M1: DB schema + discovery pipeline (v0.1.0)
 - [x] M2: Deep analysis metrics + queue logic (v0.2.0)
 - [x] M3: Dashboard & API (v0.3.0)
-- [ ] M4: Watchlist generation + JSON export
-- [ ] M5: Docker + tests + CI + fixtures mode
+- [x] M4: Watchlist generation + JSON export (v0.4.0)
+- [x] M5: Docker + tests + CI (v0.5.0)
 - [ ] M6: Deployment + runbook
 
 ## Quick Start
 
-### Backend
+### One-Command Setup (Recommended)
+```bash
+# Copy env file and add your GitHub token
+cp backend/.env.example backend/.env
+# Edit backend/.env with your GITHUB_TOKEN
+
+# Start everything
+./scripts/start-dev.sh
+
+# Services available at:
+# - Backend API: http://localhost:8000
+# - API Docs: http://localhost:8000/docs
+# - Frontend: http://localhost:5173
+```
+
+### Run Jobs
+```bash
+./scripts/run-discovery.sh              # Weekly discovery
+./scripts/run-deep-analysis.sh 10       # Deep analysis (max 10 repos)
+./scripts/generate-watchlist.sh         # Generate investor watchlist
+./scripts/run-tests.sh                  # Run all tests
+```
+
+### Manual Setup (Without Docker)
+
+#### Backend
 ```bash
 cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+alembic upgrade head
 python3 app/main.py
 ```
-Visit http://localhost:8000/docs for API documentation
 
-### Frontend
+#### Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Visit http://localhost:5173 for dashboard
 
 ## Documentation
 
