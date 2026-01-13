@@ -8,6 +8,7 @@ from app.database import SessionLocal
 from app.services.discovery import DiscoveryService
 from app.services.deep_analysis import DeepAnalysisService
 from app.services.queue_manager import QueueManager
+from app.services.watchlist_generator import WatchlistGenerator
 
 logging.basicConfig(
     level=logging.INFO,
@@ -74,11 +75,28 @@ def refresh_queue():
         db.close()
 
 
+def generate_watchlist():
+    """Generate weekly investor watchlist."""
+    logger.info("Generating watchlist...")
+    db = SessionLocal()
+    try:
+        generator = WatchlistGenerator(db)
+        result = generator.generate_watchlist()
+        logger.info(f"Watchlist generated: {result['stats']}")
+        logger.info(f"Top repos: {result['watchlist'][:5]}")
+        return result
+    except Exception as e:
+        logger.error(f"Watchlist generation failed: {e}", exc_info=True)
+        raise
+    finally:
+        db.close()
+
+
 def main():
     parser = argparse.ArgumentParser(description="GitHub OSS Health CLI")
     parser.add_argument(
         "command",
-        choices=["discovery", "deep-analysis", "refresh-queue"],
+        choices=["discovery", "deep-analysis", "refresh-queue", "generate-watchlist"],
         help="Command to run"
     )
     parser.add_argument(
@@ -96,6 +114,8 @@ def main():
         run_deep_analysis(max_repos=args.max_repos)
     elif args.command == "refresh-queue":
         refresh_queue()
+    elif args.command == "generate-watchlist":
+        generate_watchlist()
 
 
 if __name__ == "__main__":
