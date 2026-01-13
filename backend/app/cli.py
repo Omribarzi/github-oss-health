@@ -6,6 +6,8 @@ import argparse
 import logging
 from app.database import SessionLocal
 from app.services.discovery import DiscoveryService
+from app.services.deep_analysis import DeepAnalysisService
+from app.services.queue_manager import QueueManager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,6 +25,13 @@ def run_discovery():
         service = DiscoveryService(db)
         stats = service.run()
         logger.info(f"Discovery completed successfully: {stats}")
+
+        # Refresh queue after discovery
+        logger.info("Refreshing queue...")
+        queue_mgr = QueueManager(db)
+        queue_stats = queue_mgr.refresh_queue()
+        logger.info(f"Queue refreshed: {queue_stats}")
+
         return stats
     except Exception as e:
         logger.error(f"Discovery failed: {e}", exc_info=True)
@@ -31,18 +40,52 @@ def run_discovery():
         db.close()
 
 
-def run_deep_analysis():
+def run_deep_analysis(max_repos: int = None):
     """Run deep analysis pipeline."""
-    logger.info("Deep analysis not yet implemented (M2)")
-    raise NotImplementedError("Deep analysis will be implemented in M2")
+    logger.info("Starting deep analysis job...")
+    db = SessionLocal()
+    try:
+        service = DeepAnalysisService(db)
+        stats = service.run(max_repos=max_repos)
+        logger.info(f"Deep analysis completed successfully: {stats}")
+        return stats
+    except Exception as e:
+        logger.error(f"Deep analysis failed: {e}", exc_info=True)
+        raise
+    finally:
+        db.close()
+
+
+def refresh_queue():
+    """Refresh the queue priorities."""
+    logger.info("Refreshing queue...")
+    db = SessionLocal()
+    try:
+        queue_mgr = QueueManager(db)
+        stats = queue_mgr.refresh_queue()
+        summary = queue_mgr.get_queue_summary()
+        logger.info(f"Queue stats: {stats}")
+        logger.info(f"Queue summary: {summary}")
+        return stats
+    except Exception as e:
+        logger.error(f"Queue refresh failed: {e}", exc_info=True)
+        raise
+    finally:
+        db.close()
 
 
 def main():
     parser = argparse.ArgumentParser(description="GitHub OSS Health CLI")
     parser.add_argument(
         "command",
-        choices=["discovery", "deep-analysis"],
+        choices=["discovery", "deep-analysis", "refresh-queue"],
         help="Command to run"
+    )
+    parser.add_argument(
+        "--max-repos",
+        type=int,
+        default=None,
+        help="Maximum number of repos to analyze (deep-analysis only)"
     )
 
     args = parser.parse_args()
@@ -50,7 +93,9 @@ def main():
     if args.command == "discovery":
         run_discovery()
     elif args.command == "deep-analysis":
-        run_deep_analysis()
+        run_deep_analysis(max_repos=args.max_repos)
+    elif args.command == "refresh-queue":
+        refresh_queue()
 
 
 if __name__ == "__main__":
