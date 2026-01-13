@@ -26,20 +26,36 @@ Analyzes public GitHub repositories that meet ALL:
 
 ## Development Status
 
-Current milestone: **M1** (Database schema + discovery pipeline)
+Current milestone: **M3** (Dashboard & API)
 
 ## Milestones
 
-- [x] M1: DB schema + discovery pipeline
-- [ ] M2: Deep analysis metrics + queue logic
-- [ ] M3: Dashboard (read-only)
+- [x] M1: DB schema + discovery pipeline (v0.1.0)
+- [x] M2: Deep analysis metrics + queue logic (v0.2.0)
+- [x] M3: Dashboard & API (v0.3.0)
 - [ ] M4: Watchlist generation + JSON export
 - [ ] M5: Docker + tests + CI + fixtures mode
 - [ ] M6: Deployment + runbook
 
 ## Quick Start
 
-Coming after M5 (Docker setup)
+### Backend
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python3 app/main.py
+```
+Visit http://localhost:8000/docs for API documentation
+
+### Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Visit http://localhost:5173 for dashboard
 
 ## Documentation
 
