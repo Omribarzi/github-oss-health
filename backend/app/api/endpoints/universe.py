@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Optional
 from datetime import datetime
 
@@ -30,10 +31,10 @@ def get_universe_stats(db: Session = Depends(get_db)):
 
     # Language breakdown (top 10)
     language_counts = (
-        db.query(Repo.language, db.func.count(Repo.id))
+        db.query(Repo.language, func.count(Repo.id))
         .filter(Repo.eligible == True, Repo.language.isnot(None))
         .group_by(Repo.language)
-        .order_by(db.func.count(Repo.id).desc())
+        .order_by(func.count(Repo.id).desc())
         .limit(10)
         .all()
     )
