@@ -75,19 +75,23 @@ def trigger_discovery(
         service = DiscoveryService(db)
         stats = service.run()
 
-        # Auto-refresh queue after discovery
-        queue_mgr = QueueManager(db)
-        queue_stats = queue_mgr.refresh_queue()
-
         logger.info(f"Discovery completed: {stats}")
-        logger.info(f"Queue refreshed: {queue_stats}")
+
+        # Auto-refresh queue after discovery
+        try:
+            queue_mgr = QueueManager(db)
+            queue_stats = queue_mgr.refresh_queue()
+            logger.info(f"Queue refreshed: {queue_stats}")
+        except Exception as e:
+            logger.warning(f"Queue refresh failed (non-fatal): {e}", exc_info=True)
+            queue_stats = {"error": str(e)}
 
         return {
             "status": "completed",
             "job_type": "discovery",
             "stats": stats,
             "queue_stats": queue_stats,
-            "message": "Discovery completed and queue refreshed successfully"
+            "message": "Discovery completed successfully"
         }
     except Exception as e:
         logger.error(f"Discovery job failed: {e}", exc_info=True)
