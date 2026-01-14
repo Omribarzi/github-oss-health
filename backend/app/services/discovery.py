@@ -33,26 +33,38 @@ class DiscoveryService:
 
     def _is_eligible(self, repo_data: Dict[str, Any]) -> bool:
         """Check if repo meets all universe criteria."""
-        stars = repo_data.get("stargazers_count", 0)
-        # Parse timestamps and convert to naive UTC (for database compatibility)
-        created_at = datetime.fromisoformat(repo_data["created_at"].replace("Z", "+00:00")).replace(tzinfo=None)
-        pushed_at = datetime.fromisoformat(repo_data["pushed_at"].replace("Z", "+00:00")).replace(tzinfo=None)
-        archived = repo_data.get("archived", False)
-        is_fork = repo_data.get("fork", False)
+        try:
+            stars = repo_data.get("stargazers_count", 0)
+            archived = repo_data.get("archived", False)
+            is_fork = repo_data.get("fork", False)
 
-        now = datetime.utcnow()
-        age_cutoff = now - timedelta(days=settings.max_age_months * 30)
-        push_cutoff = now - timedelta(days=settings.max_days_since_push)
+            # Parse timestamps and convert to naive UTC (for database compatibility)
+            created_at_str = repo_data.get("created_at", "")
+            pushed_at_str = repo_data.get("pushed_at", "")
 
-        eligible = (
-            stars >= settings.min_stars
-            and created_at >= age_cutoff
-            and not archived
-            and not is_fork
-            and pushed_at >= push_cutoff
-        )
+            if not created_at_str or not pushed_at_str:
+                logger.warning(f"Missing timestamps for {repo_data.get('full_name')}")
+                return False
 
-        return eligible
+            created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00")).replace(tzinfo=None)
+            pushed_at = datetime.fromisoformat(pushed_at_str.replace("Z", "+00:00")).replace(tzinfo=None)
+
+            now = datetime.utcnow()
+            age_cutoff = now - timedelta(days=settings.max_age_months * 30)
+            push_cutoff = now - timedelta(days=settings.max_days_since_push)
+
+            eligible = (
+                stars >= settings.min_stars
+                and created_at >= age_cutoff
+                and not archived
+                and not is_fork
+                and pushed_at >= push_cutoff
+            )
+
+            return eligible
+        except Exception as e:
+            logger.error(f"Error checking eligibility for {repo_data.get('full_name')}: {e}", exc_info=True)
+            raise
 
     def _search_repos(self, query: str, sort: str = "stars", per_page: int = 100) -> List[Dict[str, Any]]:
         """
