@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, List
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
@@ -34,8 +34,9 @@ class DiscoveryService:
     def _is_eligible(self, repo_data: Dict[str, Any]) -> bool:
         """Check if repo meets all universe criteria."""
         stars = repo_data.get("stargazers_count", 0)
-        created_at = datetime.fromisoformat(repo_data["created_at"].replace("Z", "+00:00"))
-        pushed_at = datetime.fromisoformat(repo_data["pushed_at"].replace("Z", "+00:00"))
+        # Parse timestamps and convert to naive UTC (for database compatibility)
+        created_at = datetime.fromisoformat(repo_data["created_at"].replace("Z", "+00:00")).replace(tzinfo=None)
+        pushed_at = datetime.fromisoformat(repo_data["pushed_at"].replace("Z", "+00:00")).replace(tzinfo=None)
         archived = repo_data.get("archived", False)
         is_fork = repo_data.get("fork", False)
 
@@ -124,8 +125,8 @@ class DiscoveryService:
             "language": repo_data.get("language"),
             "stars": repo_data["stargazers_count"],
             "forks": repo_data["forks_count"],
-            "created_at": datetime.fromisoformat(repo_data["created_at"].replace("Z", "+00:00")),
-            "pushed_at": datetime.fromisoformat(repo_data["pushed_at"].replace("Z", "+00:00")),
+            "created_at": datetime.fromisoformat(repo_data["created_at"].replace("Z", "+00:00")).replace(tzinfo=None),
+            "pushed_at": datetime.fromisoformat(repo_data["pushed_at"].replace("Z", "+00:00")).replace(tzinfo=None),
             "archived": repo_data.get("archived", False),
             "is_fork": repo_data.get("fork", False),
             "eligible": eligible,

@@ -216,7 +216,7 @@ class DeepAnalysisService:
                 if not comments:
                     continue
 
-                created_at = datetime.fromisoformat(item["created_at"].replace("Z", "+00:00"))
+                created_at = datetime.fromisoformat(item["created_at"].replace("Z", "+00:00")).replace(tzinfo=None)
 
                 # Find first maintainer response
                 for comment in comments:
