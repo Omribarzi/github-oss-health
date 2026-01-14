@@ -149,7 +149,7 @@ class DiscoveryService:
             snapshot_date=datetime.utcnow(),
             stars=repo_data["stargazers_count"],
             forks=repo_data["forks_count"],
-            pushed_at=datetime.fromisoformat(repo_data["pushed_at"].replace("Z", "+00:00")),
+            pushed_at=datetime.fromisoformat(repo_data["pushed_at"].replace("Z", "+00:00")).replace(tzinfo=None),
             eligible=eligible,
             snapshot_json={
                 "github_id": repo_data["id"],

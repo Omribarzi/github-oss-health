@@ -222,7 +222,7 @@ class DeepAnalysisService:
                 for comment in comments:
                     association = comment.get("author_association", "")
                     if association in ["OWNER", "MEMBER", "COLLABORATOR"]:
-                        commented_at = datetime.fromisoformat(comment["created_at"].replace("Z", "+00:00"))
+                        commented_at = datetime.fromisoformat(comment["created_at"].replace("Z", "+00:00")).replace(tzinfo=None)
                         response_time_hours = (commented_at - created_at).total_seconds() / 3600
 
                         if is_pr:
