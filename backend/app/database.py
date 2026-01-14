@@ -3,7 +3,14 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.config import settings
 
-engine = create_engine(settings.database_url)
+# Configure engine with connection pooling and SSL settings for Neon
+engine = create_engine(
+    settings.database_url,
+    pool_pre_ping=True,  # Verify connections before using
+    pool_recycle=300,    # Recycle connections after 5 minutes
+    pool_size=5,         # Connection pool size
+    max_overflow=10,     # Max overflow connections
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
