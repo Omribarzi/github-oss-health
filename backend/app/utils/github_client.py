@@ -30,28 +30,45 @@ class GitHubClient:
             "Authorization": f"token {self.token}",
             "Accept": "application/vnd.github.v3+json",
         }
-        self.remaining_calls = None
-        self.rate_limit_reset = None
+        # Separate tracking for core and search API limits
+        self.core_remaining = None
+        self.core_reset = None
+        self.search_remaining = None
+        self.search_reset = None
         self.total_requests = 0
         self.session = httpx.Client(headers=self.headers, timeout=30.0)
 
-    def _update_rate_limit(self, headers: dict):
+    def _update_rate_limit(self, headers: dict, endpoint: str):
         """Update rate limit tracking from response headers."""
         if "X-RateLimit-Remaining" in headers:
-            self.remaining_calls = int(headers["X-RateLimit-Remaining"])
-            logger.debug(f"Rate limit remaining: {self.remaining_calls}")
+            remaining = int(headers["X-RateLimit-Remaining"])
+            reset_time = int(headers.get("X-RateLimit-Reset", 0))
 
-        if "X-RateLimit-Reset" in headers:
-            self.rate_limit_reset = int(headers["X-RateLimit-Reset"])
+            # Different limits for search vs core API
+            if endpoint.startswith("search/"):
+                self.search_remaining = remaining
+                self.search_reset = reset_time
+                logger.debug(f"Search API remaining: {remaining}")
+            else:
+                self.core_remaining = remaining
+                self.core_reset = reset_time
+                logger.debug(f"Core API remaining: {remaining}")
 
-    def _check_rate_limit(self):
+    def _check_rate_limit(self, endpoint: str):
         """Check if we're below safety threshold."""
-        if self.remaining_calls is not None:
-            if self.remaining_calls < settings.api_rate_limit_safety_threshold:
-                reset_time = datetime.fromtimestamp(self.rate_limit_reset) if self.rate_limit_reset else "unknown"
+        # Only check core API limit (not search - it's only 30/hour)
+        if endpoint.startswith("search/"):
+            # For search API, just log if low but don't abort
+            if self.search_remaining is not None and self.search_remaining < 5:
+                reset_time = datetime.fromtimestamp(self.search_reset) if self.search_reset else "unknown"
+                logger.warning(f"Search API quota low: {self.search_remaining} remaining. Resets at: {reset_time}")
+        else:
+            # For core API, abort if below safety threshold
+            if self.core_remaining is not None and self.core_remaining < settings.api_rate_limit_safety_threshold:
+                reset_time = datetime.fromtimestamp(self.core_reset) if self.core_reset else "unknown"
                 raise GitHubRateLimitExceeded(
-                    f"Rate limit safety threshold reached. "
-                    f"Remaining: {self.remaining_calls}. "
+                    f"Core API rate limit safety threshold reached. "
+                    f"Remaining: {self.core_remaining}. "
                     f"Resets at: {reset_time}"
                 )
 
@@ -77,7 +94,7 @@ class GitHubClient:
             GitHubRateLimitExceeded: When rate limit safety threshold is reached
             httpx.HTTPError: For other HTTP errors
         """
-        self._check_rate_limit()
+        self._check_rate_limit(endpoint)
 
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
 
@@ -86,7 +103,7 @@ class GitHubClient:
                 response = self.session.get(url, params=params)
                 self.total_requests += 1
 
-                self._update_rate_limit(response.headers)
+                self._update_rate_limit(response.headers, endpoint)
 
                 if response.status_code == 403:
                     if "X-RateLimit-Remaining" in response.headers and int(response.headers["X-RateLimit-Remaining"]) == 0:
@@ -120,7 +137,8 @@ class GitHubClient:
         Returns:
             GraphQL response data
         """
-        self._check_rate_limit()
+        endpoint = "graphql"
+        self._check_rate_limit(endpoint)
 
         url = f"{self.base_url}/graphql"
         payload = {"query": query}
@@ -130,7 +148,7 @@ class GitHubClient:
         response = self.session.post(url, json=payload)
         self.total_requests += 1
 
-        self._update_rate_limit(response.headers)
+        self._update_rate_limit(response.headers, endpoint)
         response.raise_for_status()
 
         result = response.json()
@@ -143,8 +161,10 @@ class GitHubClient:
         """Get current rate limit statistics."""
         return {
             "total_requests": self.total_requests,
-            "remaining_calls": self.remaining_calls,
-            "rate_limit_reset": datetime.fromtimestamp(self.rate_limit_reset).isoformat() if self.rate_limit_reset else None,
+            "core_remaining": self.core_remaining,
+            "core_reset": datetime.fromtimestamp(self.core_reset).isoformat() if self.core_reset else None,
+            "search_remaining": self.search_remaining,
+            "search_reset": datetime.fromtimestamp(self.search_reset).isoformat() if self.search_reset else None,
         }
 
     def close(self):
