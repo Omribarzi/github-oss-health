@@ -1,0 +1,79 @@
+name: Scheduled Data Collection
+
+on:
+  schedule:
+    # Run every Sunday at 00:00 UTC (weekly)
+    - cron: '0 0 * * 0'
+  workflow_dispatch:  # Allow manual trigger from GitHub Actions tab
+
+jobs:
+  run-discovery:
+    name: Run Discovery Job
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Discovery
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://github-oss-health.onrender.com/admin/trigger-discovery" \
+            -H "X-Admin-Token: ${{ secrets.ADMIN_API_KEY }}")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "Discovery job failed with status $http_code"
+            exit 1
+          fi
+
+          echo "Discovery completed successfully"
+
+  run-deep-analysis:
+    name: Run Deep Analysis Job
+    runs-on: ubuntu-latest
+    needs: run-discovery  # Run after discovery completes
+    steps:
+      - name: Trigger Deep Analysis
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://github-oss-health.onrender.com/admin/trigger-deep-analysis?max_repos=20" \
+            -H "X-Admin-Token: ${{ secrets.ADMIN_API_KEY }}")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "Deep analysis job failed with status $http_code"
+            exit 1
+          fi
+
+          echo "Deep analysis completed successfully"
+
+  generate-watchlist:
+    name: Generate Watchlist
+    runs-on: ubuntu-latest
+    needs: run-deep-analysis  # Run after deep analysis completes
+    steps:
+      - name: Trigger Watchlist Generation
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://github-oss-health.onrender.com/admin/trigger-watchlist" \
+            -H "X-Admin-Token: ${{ secrets.ADMIN_API_KEY }}")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "Watchlist generation failed with status $http_code"
+            exit 1
+          fi
+
+          echo "Watchlist generated successfully"

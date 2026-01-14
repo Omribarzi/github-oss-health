@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     api_rate_limit_safety_threshold: int = 500
     deep_analysis_max_requests_per_run: int = 5000
 
+    # Admin API security
+    admin_api_key: Optional[str] = None
+
     # Health index weights (configurable)
     health_index_weight_velocity: float = 0.25
     health_index_weight_responsiveness: float = 0.25
