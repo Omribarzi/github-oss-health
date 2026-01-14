@@ -246,18 +246,28 @@ class DiscoveryService:
 
         except GitHubRateLimitExceeded as e:
             logger.error(f"Rate limit exceeded: {e}")
-            job_run.status = "failed"
-            job_run.error_message = str(e)
-            job_run.stats_json = stats
-            self.db.commit()
+            self.db.rollback()  # Rollback failed transaction
+            try:
+                job_run.status = "failed"
+                job_run.error_message = str(e)
+                job_run.stats_json = stats
+                self.db.commit()
+            except Exception as commit_error:
+                logger.error(f"Failed to update job_run status: {commit_error}")
+                self.db.rollback()
             raise
 
         except Exception as e:
             logger.error(f"Discovery failed: {e}", exc_info=True)
-            job_run.status = "failed"
-            job_run.error_message = str(e)
-            job_run.stats_json = stats
-            self.db.commit()
+            self.db.rollback()  # Rollback failed transaction
+            try:
+                job_run.status = "failed"
+                job_run.error_message = str(e)
+                job_run.stats_json = stats
+                self.db.commit()
+            except Exception as commit_error:
+                logger.error(f"Failed to update job_run status: {commit_error}")
+                self.db.rollback()
             raise
 
         finally:
