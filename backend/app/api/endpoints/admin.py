@@ -225,6 +225,47 @@ def refresh_queue(
         )
 
 
+@router.post("/reset-database")
+def reset_database(
+    db: Session = Depends(get_db),
+    _auth: bool = Depends(verify_admin_token)
+):
+    """
+    **DANGER:** Reset database - drops all tables and recreates schema.
+
+    This endpoint is for development/testing only. It will:
+    - Drop all existing tables
+    - Recreate schema from models
+    - Clear all data
+
+    Use with extreme caution!
+    """
+    try:
+        logger.warning("Admin API: DATABASE RESET REQUESTED")
+
+        from app.database import Base, engine
+
+        # Drop all tables
+        Base.metadata.drop_all(bind=engine)
+        logger.info("Dropped all tables")
+
+        # Recreate all tables
+        Base.metadata.create_all(bind=engine)
+        logger.info("Recreated all tables")
+
+        return {
+            "status": "completed",
+            "message": "Database reset successfully - all data cleared",
+            "warning": "All previous data has been permanently deleted"
+        }
+    except Exception as e:
+        logger.error(f"Database reset failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database reset failed: {str(e)}"
+        )
+
+
 @router.get("/status")
 def get_admin_status(_auth: bool = Depends(verify_admin_token)):
     """
