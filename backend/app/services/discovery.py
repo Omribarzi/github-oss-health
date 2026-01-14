@@ -234,7 +234,7 @@ class DiscoveryService:
 
             client_stats = self.client.get_stats()
             stats["requests_made"] = client_stats["total_requests"]
-            stats["rate_limit_remaining"] = client_stats["remaining_calls"]
+            stats["rate_limit_remaining"] = client_stats["core_remaining"]
 
             job_run.completed_at = datetime.utcnow()
             job_run.status = "completed"
