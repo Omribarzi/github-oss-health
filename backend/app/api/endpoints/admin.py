@@ -4,13 +4,19 @@ Admin API endpoints for triggering background jobs.
 These endpoints allow triggering data collection jobs via HTTP requests.
 Protected by API key authentication for security.
 """
-from fastapi import APIRouter, Depends, HTTPException, Header, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, BackgroundTasks, Request
 from sqlalchemy.orm import Session
 from typing import Optional
 import logging
+import secrets
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.database import get_db
 from app.config import settings
+
+# Rate limiter for admin endpoints (stricter limits)
+limiter = Limiter(key_func=get_remote_address)
 from app.services.discovery import DiscoveryService
 from app.services.deep_analysis import DeepAnalysisService
 from app.services.queue_manager import QueueManager
@@ -41,7 +47,8 @@ def verify_admin_token(x_admin_token: Optional[str] = Header(None)):
             detail="Missing X-Admin-Token header"
         )
 
-    if x_admin_token != settings.admin_api_key:
+    # Use constant-time comparison to prevent timing attacks
+    if not secrets.compare_digest(x_admin_token, settings.admin_api_key):
         raise HTTPException(
             status_code=403,
             detail="Invalid admin token"
@@ -51,7 +58,9 @@ def verify_admin_token(x_admin_token: Optional[str] = Header(None)):
 
 
 @router.post("/trigger-discovery")
+@limiter.limit("10/hour")
 def trigger_discovery(
+    request: Request,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     _auth: bool = Depends(verify_admin_token)
@@ -102,7 +111,9 @@ def trigger_discovery(
 
 
 @router.post("/trigger-deep-analysis")
+@limiter.limit("10/hour")
 def trigger_deep_analysis(
+    request: Request,
     max_repos: int = Query(10, ge=1, le=100, description="Maximum repos to analyze"),
     db: Session = Depends(get_db),
     _auth: bool = Depends(verify_admin_token)
@@ -147,7 +158,9 @@ def trigger_deep_analysis(
 
 
 @router.post("/trigger-watchlist")
+@limiter.limit("10/hour")
 def trigger_watchlist(
+    request: Request,
     db: Session = Depends(get_db),
     _auth: bool = Depends(verify_admin_token)
 ):
@@ -188,7 +201,9 @@ def trigger_watchlist(
 
 
 @router.post("/refresh-queue")
+@limiter.limit("10/hour")
 def refresh_queue(
+    request: Request,
     db: Session = Depends(get_db),
     _auth: bool = Depends(verify_admin_token)
 ):
@@ -230,7 +245,9 @@ def refresh_queue(
 
 
 @router.post("/reset-database")
+@limiter.limit("5/hour")
 def reset_database(
+    request: Request,
     db: Session = Depends(get_db),
     _auth: bool = Depends(verify_admin_token)
 ):
@@ -243,7 +260,17 @@ def reset_database(
     - Clear all data
 
     Use with extreme caution!
+
+    BLOCKED in production environment.
     """
+    # Security: Block this dangerous endpoint in production
+    if settings.environment == "production":
+        logger.warning("Admin API: DATABASE RESET BLOCKED - production environment")
+        raise HTTPException(
+            status_code=403,
+            detail="Database reset is disabled in production environment"
+        )
+
     try:
         logger.warning("Admin API: DATABASE RESET REQUESTED")
 
@@ -271,7 +298,8 @@ def reset_database(
 
 
 @router.get("/status")
-def get_admin_status(_auth: bool = Depends(verify_admin_token)):
+@limiter.limit("30/minute")
+def get_admin_status(request: Request, _auth: bool = Depends(verify_admin_token)):
     """
     Check admin API status and configuration.
 
