@@ -4,7 +4,7 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: github_oss_health
+      POSTGRES_DB: nadlan_il
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
@@ -22,8 +22,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/github_oss_health
-      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/nadlan_il
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
       ENVIRONMENT: development
     depends_on:
       db:

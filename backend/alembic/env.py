@@ -9,13 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from app.database import Base
 from app.models import (
-    Repo,
-    DiscoverySnapshot,
-    DeepSnapshot,
-    RepoQueue,
-    InvestorWatchlist,
-    JobRun,
-    Alert,
+    User, Property, PropertyUnit, Listing, Deal, Tour, Favorite, MarketSnapshot,
 )
 from app.config import settings
 

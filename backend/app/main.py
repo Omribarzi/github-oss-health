@@ -1,47 +1,46 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.endpoints import universe, repos, watchlist, admin
-from app.config import settings
+from app.api.endpoints import auth, properties, listings, deals, tours, analytics, favorites
 
 app = FastAPI(
-    title="GitHub OSS Health API",
-    description="Research-grade system for investor analysis of promising open-source projects",
-    version="1.1.0",
+    title="Nadlan IL - Commercial Real Estate Marketplace",
+    description="Israeli commercial real estate leasing and deal management platform",
+    version="1.0.0",
 )
 
-# CORS middleware for frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
         "http://localhost:3000",
-        "https://github-oss-health.vercel.app",  # Production frontend
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST"],  # Allow POST for admin endpoints
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(universe.router, prefix="/api/universe", tags=["universe"])
-app.include_router(repos.router, prefix="/api/repos", tags=["repos"])
-app.include_router(watchlist.router, prefix="/api/watchlist", tags=["watchlist"])
-app.include_router(admin.router, prefix="/admin", tags=["admin"])
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(properties.router, prefix="/api/properties", tags=["properties"])
+app.include_router(listings.router, prefix="/api/listings", tags=["listings"])
+app.include_router(deals.router, prefix="/api/deals", tags=["deals"])
+app.include_router(tours.router, prefix="/api/tours", tags=["tours"])
+app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
+app.include_router(favorites.router, prefix="/api/favorites", tags=["favorites"])
 
 
 @app.get("/")
 def root():
-    """API root endpoint."""
     return {
-        "message": "GitHub OSS Health API",
-        "version": "1.1.0",
+        "name": "Nadlan IL - Commercial Real Estate Marketplace",
+        "name_he": "נדלן IL - מרקטפלייס נדל\"ן מסחרי",
+        "version": "1.0.0",
         "docs": "/docs",
+        "market": "Israel",
     }
 
 
 @app.get("/health")
 def health_check():
-    """Health check endpoint."""
     return {"status": "healthy"}
 
 

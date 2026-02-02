@@ -1,68 +1,60 @@
-# GitHub OSS Health & Early Signal Discovery System
+# Nadlan IL - Israeli Commercial Real Estate Marketplace
 
-Research-grade system for investor analysis of promising open-source projects.
+A comprehensive commercial real estate (CRE) platform for the Israeli market, inspired by VTS. Manages property listings, deal pipelines, tenant interactions, and market analytics.
 
-## Project Philosophy
+## Features
 
-- **Credibility over features**: Every metric includes availability status and limitations
-- **Restraint as design**: No invented data, no silent smoothing, no false certainty
-- **Investor-focused**: Three-track analysis (Momentum, Durability, Adoption) for early signal discovery
+### Property Management
+- Full property lifecycle management with Hebrew/English bilingual support
+- Support for office, retail, industrial, logistics, coworking, and mixed-use properties
+- Property units, floor plans, and building specifications
+- Israeli-specific fields: arnona zones, building classification, accessibility
 
-## Universe Criteria
+### Listings & Search
+- Advanced search with filters: city, property type, price range, area, amenities
+- Listing types: lease, sublease, sale
+- Israeli pricing: monthly rent in ILS, management fees, arnona
+- Engagement tracking: views, inquiries, tours
 
-Analyzes public GitHub repositories that meet ALL:
-- `stars >= 2000`
-- `created_at >= now() - 24 months` (sliding window)
-- `archived = false`
-- `fork = false`
-- `pushed_at` within last 90 days (for deep analysis)
+### Deal Pipeline
+- Full deal lifecycle: Inquiry -> Tour -> Proposal -> Negotiation -> LOI -> Legal Review -> Signed
+- Pipeline visualization with stage-by-stage tracking
+- Activity logging for complete deal history
+- Role-based access: landlords, tenants, brokers
+
+### Market Analytics
+- City-level and property-type breakdowns
+- Price trends and market snapshots
+- Deal pipeline analytics with total value tracking
+- Occupancy rates and days-on-market metrics
+
+### Israeli Market Focus
+- RTL (Right-to-Left) Hebrew UI
+- All 20 major Israeli cities
+- Prices in ILS (Israeli New Shekel)
+- Area in square meters
+- Israeli property standards and classifications
 
 ## Architecture
 
 - **Backend**: Python + FastAPI + PostgreSQL + SQLAlchemy + Alembic
-- **Frontend**: React + Vite + Recharts
-- **Scheduler**: APScheduler (bi-weekly deep analysis, weekly discovery)
-- **Queue**: Database-backed (`repo_queue` table)
-
-## Development Status
-
-Current milestone: **M5** (Docker + Tests + CI)
-
-## Milestones
-
-- [x] M1: DB schema + discovery pipeline (v0.1.0)
-- [x] M2: Deep analysis metrics + queue logic (v0.2.0)
-- [x] M3: Dashboard & API (v0.3.0)
-- [x] M4: Watchlist generation + JSON export (v0.4.0)
-- [x] M5: Docker + tests + CI (v0.5.0)
-- [ ] M6: Deployment + runbook
+- **Frontend**: React 19 + Vite + Recharts
+- **Auth**: JWT-based with role support (landlord, tenant, broker, admin)
+- **Database**: PostgreSQL with full migration support
 
 ## Quick Start
 
-### One-Command Setup (Recommended)
+### Docker (Recommended)
 ```bash
-# Copy env file and add your GitHub token
-cp backend/.env.example backend/.env
-# Edit backend/.env with your GITHUB_TOKEN
-
-# Start everything
-./scripts/start-dev.sh
-
-# Services available at:
-# - Backend API: http://localhost:8000
-# - API Docs: http://localhost:8000/docs
-# - Frontend: http://localhost:5173
+docker compose up
 ```
 
-### Run Jobs
-```bash
-./scripts/run-discovery.sh              # Weekly discovery
-./scripts/run-deep-analysis.sh 10       # Deep analysis (max 10 repos)
-./scripts/generate-watchlist.sh         # Generate investor watchlist
-./scripts/run-tests.sh                  # Run all tests
-```
+Services:
+- Backend API: http://localhost:8000
+- API Docs (Swagger): http://localhost:8000/docs
+- Frontend: http://localhost:5173
 
-### Manual Setup (Without Docker)
+### Manual Setup
 
 #### Backend
 ```bash
@@ -81,11 +73,60 @@ npm install
 npm run dev
 ```
 
-## Documentation
+## API Endpoints
 
-- [Methodology](docs/METHODOLOGY.md) - What we measure and what we don't
-- [Deployment](docs/DEPLOYMENT.md) - Production setup guide
-- [Development](docs/DEVELOPMENT.md) - Local development guide
+### Auth
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login
+- `GET /api/auth/me` - Current user profile
+
+### Properties
+- `GET /api/properties` - List with filtering
+- `GET /api/properties/{id}` - Property details
+- `POST /api/properties` - Create property
+- `PUT /api/properties/{id}` - Update property
+
+### Listings
+- `GET /api/listings` - Search listings
+- `GET /api/listings/{id}` - Listing detail
+- `POST /api/listings` - Create listing
+- `PUT /api/listings/{id}` - Update listing
+
+### Deals
+- `GET /api/deals` - List deals
+- `GET /api/deals/pipeline` - Pipeline view
+- `POST /api/deals` - Create deal (inquiry)
+- `PUT /api/deals/{id}` - Update deal stage
+
+### Tours
+- `GET /api/tours` - List tours
+- `POST /api/tours` - Schedule tour
+- `PUT /api/tours/{id}` - Update tour
+
+### Analytics
+- `GET /api/analytics/overview` - Market overview KPIs
+- `GET /api/analytics/by-city` - City breakdown
+- `GET /api/analytics/by-type` - Property type breakdown
+- `GET /api/analytics/deal-pipeline` - Deal pipeline stats
+- `GET /api/analytics/price-trends` - Historical price data
+
+### Favorites
+- `GET /api/favorites` - User favorites
+- `POST /api/favorites/{listing_id}` - Add favorite
+- `DELETE /api/favorites/{listing_id}` - Remove favorite
+
+## Database Schema
+
+| Table | Description |
+|-------|-------------|
+| `users` | Landlords, tenants, brokers, admins |
+| `properties` | Commercial properties with Israeli location data |
+| `property_units` | Individual units within properties |
+| `listings` | Active listings for lease/sublease/sale |
+| `deals` | Deal pipeline with full stage tracking |
+| `tours` | Property tour scheduling |
+| `favorites` | User saved listings |
+| `market_snapshots` | Historical market analytics data |
 
 ## License
 

@@ -1,190 +1,251 @@
-"""initial schema
+"""Initial schema for Israeli CRE marketplace
 
 Revision ID: 001
 Revises:
-Create Date: 2026-01-13
-
+Create Date: 2026-02-02
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
-revision = '001'
+revision = "001"
 down_revision = None
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
+    # Users table
     op.create_table(
-        'repos',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('github_id', sa.Integer(), nullable=False),
-        sa.Column('owner', sa.String(), nullable=False),
-        sa.Column('name', sa.String(), nullable=False),
-        sa.Column('full_name', sa.String(), nullable=False),
-        sa.Column('language', sa.String(), nullable=True),
-        sa.Column('stars', sa.Integer(), nullable=False),
-        sa.Column('forks', sa.Integer(), nullable=False),
-        sa.Column('created_at', sa.DateTime(), nullable=False),
-        sa.Column('pushed_at', sa.DateTime(), nullable=False),
-        sa.Column('archived', sa.Boolean(), nullable=False),
-        sa.Column('is_fork', sa.Boolean(), nullable=False),
-        sa.Column('first_discovered_at', sa.DateTime(), nullable=False),
-        sa.Column('last_seen_at', sa.DateTime(), nullable=False),
-        sa.Column('eligible', sa.Boolean(), nullable=False),
-        sa.PrimaryKeyConstraint('id')
+        "users",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("email", sa.String(255), nullable=False),
+        sa.Column("hashed_password", sa.String(255), nullable=False),
+        sa.Column("full_name", sa.String(255), nullable=False),
+        sa.Column("full_name_he", sa.String(255), nullable=True),
+        sa.Column("phone", sa.String(20), nullable=True),
+        sa.Column("role", sa.Enum("landlord", "tenant", "broker", "admin", name="userrole"), nullable=False),
+        sa.Column("company", sa.String(255), nullable=True),
+        sa.Column("company_he", sa.String(255), nullable=True),
+        sa.Column("is_active", sa.Boolean(), default=True),
+        sa.Column("is_verified", sa.Boolean(), default=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index('ix_repos_id', 'repos', ['id'])
-    op.create_index('ix_repos_github_id', 'repos', ['github_id'], unique=True)
-    op.create_index('ix_repos_owner', 'repos', ['owner'])
-    op.create_index('ix_repos_name', 'repos', ['name'])
-    op.create_index('ix_repos_full_name', 'repos', ['full_name'], unique=True)
-    op.create_index('ix_repos_language', 'repos', ['language'])
-    op.create_index('ix_repos_stars', 'repos', ['stars'])
-    op.create_index('ix_repos_created_at', 'repos', ['created_at'])
-    op.create_index('ix_repos_pushed_at', 'repos', ['pushed_at'])
-    op.create_index('ix_repos_eligible', 'repos', ['eligible'])
-    op.create_index('idx_repo_stars_created', 'repos', ['stars', 'created_at'])
-    op.create_index('idx_repo_eligible_stars', 'repos', ['eligible', 'stars'])
+    op.create_index("ix_users_id", "users", ["id"])
+    op.create_index("ix_users_email", "users", ["email"], unique=True)
 
+    # Properties table
     op.create_table(
-        'discovery_snapshots',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('repo_id', sa.Integer(), nullable=False),
-        sa.Column('snapshot_date', sa.DateTime(), nullable=False),
-        sa.Column('stars', sa.Integer(), nullable=False),
-        sa.Column('forks', sa.Integer(), nullable=False),
-        sa.Column('pushed_at', sa.DateTime(), nullable=False),
-        sa.Column('eligible', sa.Boolean(), nullable=False),
-        sa.Column('snapshot_json', postgresql.JSON(astext_type=sa.Text()), nullable=False),
-        sa.Column('created_at', sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(['repo_id'], ['repos.id']),
-        sa.PrimaryKeyConstraint('id')
+        "properties",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("owner_id", sa.Integer(), nullable=False),
+        sa.Column("name", sa.String(255), nullable=False),
+        sa.Column("name_he", sa.String(255), nullable=True),
+        sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("description_he", sa.Text(), nullable=True),
+        sa.Column("property_type", sa.Enum("office", "retail", "industrial", "logistics", "coworking", "mixed_use", name="propertytype"), nullable=False),
+        sa.Column("status", sa.Enum("active", "inactive", "under_renovation", name="propertystatus"), default="active"),
+        sa.Column("city", sa.Enum("tel_aviv", "jerusalem", "haifa", "beer_sheva", "ramat_gan", "herzliya", "petah_tikva", "netanya", "rishon_lezion", "ashdod", "holon", "bnei_brak", "rehovot", "kfar_saba", "modiin", "raanana", "lod", "yokneam", "caesarea", "other", name="city"), nullable=False),
+        sa.Column("neighborhood", sa.String(255), nullable=True),
+        sa.Column("neighborhood_he", sa.String(255), nullable=True),
+        sa.Column("street_address", sa.String(255), nullable=True),
+        sa.Column("street_address_he", sa.String(255), nullable=True),
+        sa.Column("latitude", sa.Float(), nullable=True),
+        sa.Column("longitude", sa.Float(), nullable=True),
+        sa.Column("total_area_sqm", sa.Float(), nullable=False),
+        sa.Column("floor_count", sa.Integer(), nullable=True),
+        sa.Column("year_built", sa.Integer(), nullable=True),
+        sa.Column("parking_spots", sa.Integer(), default=0),
+        sa.Column("has_elevator", sa.Boolean(), default=False),
+        sa.Column("has_loading_dock", sa.Boolean(), default=False),
+        sa.Column("has_generator", sa.Boolean(), default=False),
+        sa.Column("accessibility", sa.Boolean(), default=False),
+        sa.Column("building_class", sa.String(10), nullable=True),
+        sa.Column("energy_rating", sa.String(10), nullable=True),
+        sa.Column("arnona_zone", sa.String(50), nullable=True),
+        sa.Column("images", sa.JSON(), default=[]),
+        sa.Column("floor_plans", sa.JSON(), default=[]),
+        sa.Column("virtual_tour_url", sa.String(500), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(["owner_id"], ["users.id"]),
     )
-    op.create_index('ix_discovery_snapshots_id', 'discovery_snapshots', ['id'])
-    op.create_index('ix_discovery_snapshots_repo_id', 'discovery_snapshots', ['repo_id'])
-    op.create_index('ix_discovery_snapshots_snapshot_date', 'discovery_snapshots', ['snapshot_date'])
-    op.create_index('idx_discovery_repo_date', 'discovery_snapshots', ['repo_id', 'snapshot_date'])
+    op.create_index("ix_properties_id", "properties", ["id"])
+    op.create_index("ix_properties_owner_id", "properties", ["owner_id"])
+    op.create_index("ix_properties_city_type", "properties", ["city", "property_type"])
+    op.create_index("ix_properties_area", "properties", ["total_area_sqm"])
 
+    # Property Units table
     op.create_table(
-        'deep_snapshots',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('repo_id', sa.Integer(), nullable=False),
-        sa.Column('snapshot_date', sa.DateTime(), nullable=False),
-        sa.Column('monthly_active_contributors_6m', postgresql.JSON(astext_type=sa.Text()), nullable=True),
-        sa.Column('contribution_distribution', postgresql.JSON(astext_type=sa.Text()), nullable=True),
-        sa.Column('weekly_commits_12w', postgresql.JSON(astext_type=sa.Text()), nullable=True),
-        sa.Column('weekly_prs_12w', postgresql.JSON(astext_type=sa.Text()), nullable=True),
-        sa.Column('weekly_issues_12w', postgresql.JSON(astext_type=sa.Text()), nullable=True),
-        sa.Column('commit_trend_slope', sa.Float(), nullable=True),
-        sa.Column('pr_trend_slope', sa.Float(), nullable=True),
-        sa.Column('issue_trend_slope', sa.Float(), nullable=True),
-        sa.Column('median_issue_response_time_hours', sa.Float(), nullable=True),
-        sa.Column('median_pr_response_time_hours', sa.Float(), nullable=True),
-        sa.Column('response_time_availability', sa.String(), nullable=True),
-        sa.Column('dependents_count', sa.Integer(), nullable=True),
-        sa.Column('npm_downloads_30d', sa.Integer(), nullable=True),
-        sa.Column('fork_to_star_ratio', sa.Float(), nullable=True),
-        sa.Column('adoption_availability', sa.String(), nullable=True),
-        sa.Column('top_contributor_share', sa.Float(), nullable=True),
-        sa.Column('gini_coefficient', sa.Float(), nullable=True),
-        sa.Column('active_maintainers_count', sa.Integer(), nullable=True),
-        sa.Column('health_index', sa.Float(), nullable=True),
-        sa.Column('metrics_json', postgresql.JSON(astext_type=sa.Text()), nullable=False),
-        sa.Column('created_at', sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(['repo_id'], ['repos.id']),
-        sa.PrimaryKeyConstraint('id')
+        "property_units",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("property_id", sa.Integer(), nullable=False),
+        sa.Column("unit_number", sa.String(50), nullable=False),
+        sa.Column("floor", sa.Integer(), nullable=True),
+        sa.Column("area_sqm", sa.Float(), nullable=False),
+        sa.Column("is_available", sa.Boolean(), default=True),
+        sa.Column("unit_type", sa.Enum("office", "retail", "industrial", "logistics", "coworking", "mixed_use", name="propertytype", create_type=False), nullable=True),
+        sa.Column("rooms", sa.Integer(), nullable=True),
+        sa.Column("has_balcony", sa.Boolean(), default=False),
+        sa.Column("has_kitchenette", sa.Boolean(), default=False),
+        sa.Column("has_server_room", sa.Boolean(), default=False),
+        sa.Column("ceiling_height_m", sa.Float(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(["property_id"], ["properties.id"]),
     )
-    op.create_index('ix_deep_snapshots_id', 'deep_snapshots', ['id'])
-    op.create_index('ix_deep_snapshots_repo_id', 'deep_snapshots', ['repo_id'])
-    op.create_index('ix_deep_snapshots_snapshot_date', 'deep_snapshots', ['snapshot_date'])
-    op.create_index('idx_deep_repo_date', 'deep_snapshots', ['repo_id', 'snapshot_date'])
+    op.create_index("ix_property_units_id", "property_units", ["id"])
+    op.create_index("ix_property_units_property_id", "property_units", ["property_id"])
 
+    # Listings table
     op.create_table(
-        'repo_queue',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('repo_id', sa.Integer(), nullable=False),
-        sa.Column('priority', sa.Integer(), nullable=False),
-        sa.Column('priority_reason', sa.String(), nullable=False),
-        sa.Column('queued_at', sa.DateTime(), nullable=False),
-        sa.Column('processed', sa.Boolean(), nullable=False),
-        sa.Column('processed_at', sa.DateTime(), nullable=True),
-        sa.Column('last_deep_analysis_at', sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(['repo_id'], ['repos.id']),
-        sa.PrimaryKeyConstraint('id')
+        "listings",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("property_id", sa.Integer(), nullable=False),
+        sa.Column("unit_id", sa.Integer(), nullable=True),
+        sa.Column("broker_id", sa.Integer(), nullable=True),
+        sa.Column("title", sa.String(255), nullable=False),
+        sa.Column("title_he", sa.String(255), nullable=True),
+        sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("description_he", sa.Text(), nullable=True),
+        sa.Column("listing_type", sa.Enum("lease", "sublease", "sale", name="listingtype"), nullable=False),
+        sa.Column("status", sa.Enum("active", "pending", "leased", "sold", "withdrawn", "expired", name="listingstatus"), default="active"),
+        sa.Column("price", sa.Float(), nullable=False),
+        sa.Column("price_period", sa.Enum("monthly", "annual", "per_sqm_monthly", "per_sqm_annual", "total", name="priceperiod"), default="monthly"),
+        sa.Column("management_fee_monthly", sa.Float(), nullable=True),
+        sa.Column("arnona_monthly", sa.Float(), nullable=True),
+        sa.Column("negotiable", sa.Boolean(), default=True),
+        sa.Column("available_area_sqm", sa.Float(), nullable=False),
+        sa.Column("min_area_sqm", sa.Float(), nullable=True),
+        sa.Column("min_lease_months", sa.Integer(), nullable=True),
+        sa.Column("max_lease_months", sa.Integer(), nullable=True),
+        sa.Column("available_from", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("furnished", sa.Boolean(), default=False),
+        sa.Column("condition", sa.String(50), nullable=True),
+        sa.Column("view_count", sa.Integer(), default=0),
+        sa.Column("inquiry_count", sa.Integer(), default=0),
+        sa.Column("tour_count", sa.Integer(), default=0),
+        sa.Column("published_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(["property_id"], ["properties.id"]),
+        sa.ForeignKeyConstraint(["unit_id"], ["property_units.id"]),
+        sa.ForeignKeyConstraint(["broker_id"], ["users.id"]),
     )
-    op.create_index('ix_repo_queue_id', 'repo_queue', ['id'])
-    op.create_index('ix_repo_queue_repo_id', 'repo_queue', ['repo_id'])
-    op.create_index('ix_repo_queue_priority', 'repo_queue', ['priority'])
-    op.create_index('ix_repo_queue_processed', 'repo_queue', ['processed'])
-    op.create_index('ix_repo_queue_last_deep_analysis_at', 'repo_queue', ['last_deep_analysis_at'])
-    op.create_index('idx_queue_priority', 'repo_queue', ['processed', 'priority', 'queued_at'])
+    op.create_index("ix_listings_id", "listings", ["id"])
+    op.create_index("ix_listings_property_id", "listings", ["property_id"])
+    op.create_index("ix_listings_status_type", "listings", ["status", "listing_type"])
+    op.create_index("ix_listings_price", "listings", ["price"])
+    op.create_index("ix_listings_area", "listings", ["available_area_sqm"])
 
+    # Deals table
     op.create_table(
-        'investor_watchlists',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('repo_id', sa.Integer(), nullable=False),
-        sa.Column('watchlist_date', sa.DateTime(), nullable=False),
-        sa.Column('momentum_score', sa.Float(), nullable=False),
-        sa.Column('durability_score', sa.Float(), nullable=False),
-        sa.Column('adoption_score', sa.Float(), nullable=False),
-        sa.Column('rationale', sa.String(), nullable=False),
-        sa.Column('metrics_snapshot', postgresql.JSON(astext_type=sa.Text()), nullable=False),
-        sa.Column('created_at', sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(['repo_id'], ['repos.id']),
-        sa.PrimaryKeyConstraint('id')
+        "deals",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("listing_id", sa.Integer(), nullable=False),
+        sa.Column("tenant_id", sa.Integer(), nullable=False),
+        sa.Column("broker_id", sa.Integer(), nullable=True),
+        sa.Column("stage", sa.Enum("inquiry", "tour_scheduled", "tour_completed", "proposal", "negotiation", "loi_signed", "legal_review", "signed", "lost", "withdrawn", name="dealstage"), nullable=False),
+        sa.Column("proposed_price", sa.Float(), nullable=True),
+        sa.Column("final_price", sa.Float(), nullable=True),
+        sa.Column("proposed_area_sqm", sa.Float(), nullable=True),
+        sa.Column("lease_term_months", sa.Integer(), nullable=True),
+        sa.Column("inquiry_date", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("tour_date", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("proposal_date", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("loi_date", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("signed_date", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("lost_date", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("expected_move_in", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("notes", sa.Text(), nullable=True),
+        sa.Column("lost_reason", sa.String(255), nullable=True),
+        sa.Column("activity_log", sa.JSON(), default=[]),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(["listing_id"], ["listings.id"]),
+        sa.ForeignKeyConstraint(["tenant_id"], ["users.id"]),
+        sa.ForeignKeyConstraint(["broker_id"], ["users.id"]),
     )
-    op.create_index('ix_investor_watchlists_id', 'investor_watchlists', ['id'])
-    op.create_index('ix_investor_watchlists_repo_id', 'investor_watchlists', ['repo_id'])
-    op.create_index('ix_investor_watchlists_watchlist_date', 'investor_watchlists', ['watchlist_date'])
-    op.create_index('idx_watchlist_date_momentum', 'investor_watchlists', ['watchlist_date', 'momentum_score'])
-    op.create_index('idx_watchlist_date_durability', 'investor_watchlists', ['watchlist_date', 'durability_score'])
-    op.create_index('idx_watchlist_date_adoption', 'investor_watchlists', ['watchlist_date', 'adoption_score'])
+    op.create_index("ix_deals_id", "deals", ["id"])
+    op.create_index("ix_deals_listing_id", "deals", ["listing_id"])
+    op.create_index("ix_deals_stage_date", "deals", ["stage", "inquiry_date"])
 
+    # Tours table
     op.create_table(
-        'job_runs',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('job_type', sa.String(), nullable=False),
-        sa.Column('started_at', sa.DateTime(), nullable=False),
-        sa.Column('completed_at', sa.DateTime(), nullable=True),
-        sa.Column('status', sa.String(), nullable=False),
-        sa.Column('stats_json', postgresql.JSON(astext_type=sa.Text()), nullable=False),
-        sa.Column('error_message', sa.String(), nullable=True),
-        sa.PrimaryKeyConstraint('id')
+        "tours",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("listing_id", sa.Integer(), nullable=False),
+        sa.Column("contact_id", sa.Integer(), nullable=False),
+        sa.Column("status", sa.Enum("requested", "confirmed", "completed", "cancelled", "no_show", name="tourstatus"), default="requested"),
+        sa.Column("scheduled_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("duration_minutes", sa.Integer(), default=30),
+        sa.Column("notes", sa.Text(), nullable=True),
+        sa.Column("rating", sa.Integer(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(["listing_id"], ["listings.id"]),
+        sa.ForeignKeyConstraint(["contact_id"], ["users.id"]),
     )
-    op.create_index('ix_job_runs_id', 'job_runs', ['id'])
-    op.create_index('ix_job_runs_job_type', 'job_runs', ['job_type'])
-    op.create_index('ix_job_runs_started_at', 'job_runs', ['started_at'])
-    op.create_index('idx_job_type_started', 'job_runs', ['job_type', 'started_at'])
+    op.create_index("ix_tours_id", "tours", ["id"])
+    op.create_index("ix_tours_listing_id", "tours", ["listing_id"])
 
+    # Favorites table
     op.create_table(
-        'alerts',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('alert_type', sa.String(), nullable=False),
-        sa.Column('severity', sa.String(), nullable=False),
-        sa.Column('repo_id', sa.Integer(), nullable=True),
-        sa.Column('message', sa.String(), nullable=False),
-        sa.Column('resolved', sa.Boolean(), nullable=False),
-        sa.Column('created_at', sa.DateTime(), nullable=False),
-        sa.Column('resolved_at', sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(['repo_id'], ['repos.id']),
-        sa.PrimaryKeyConstraint('id')
+        "favorites",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("user_id", sa.Integer(), nullable=False),
+        sa.Column("listing_id", sa.Integer(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
+        sa.ForeignKeyConstraint(["listing_id"], ["listings.id"]),
+        sa.UniqueConstraint("user_id", "listing_id", name="uq_user_listing_favorite"),
     )
-    op.create_index('ix_alerts_id', 'alerts', ['id'])
-    op.create_index('ix_alerts_alert_type', 'alerts', ['alert_type'])
-    op.create_index('ix_alerts_severity', 'alerts', ['severity'])
-    op.create_index('ix_alerts_repo_id', 'alerts', ['repo_id'])
-    op.create_index('ix_alerts_resolved', 'alerts', ['resolved'])
-    op.create_index('ix_alerts_created_at', 'alerts', ['created_at'])
-    op.create_index('idx_alert_unresolved', 'alerts', ['resolved', 'severity', 'created_at'])
+    op.create_index("ix_favorites_id", "favorites", ["id"])
+    op.create_index("ix_favorites_user_id", "favorites", ["user_id"])
+
+    # Market Snapshots table
+    op.create_table(
+        "market_snapshots",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("snapshot_date", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("city", sa.Enum("tel_aviv", "jerusalem", "haifa", "beer_sheva", "ramat_gan", "herzliya", "petah_tikva", "netanya", "rishon_lezion", "ashdod", "holon", "bnei_brak", "rehovot", "kfar_saba", "modiin", "raanana", "lod", "yokneam", "caesarea", "other", name="city", create_type=False), nullable=False),
+        sa.Column("property_type", sa.Enum("office", "retail", "industrial", "logistics", "coworking", "mixed_use", name="propertytype", create_type=False), nullable=False),
+        sa.Column("avg_price_per_sqm", sa.Float(), nullable=True),
+        sa.Column("median_price_per_sqm", sa.Float(), nullable=True),
+        sa.Column("min_price_per_sqm", sa.Float(), nullable=True),
+        sa.Column("max_price_per_sqm", sa.Float(), nullable=True),
+        sa.Column("total_listings", sa.Integer(), default=0),
+        sa.Column("total_available_sqm", sa.Float(), default=0),
+        sa.Column("new_listings_count", sa.Integer(), default=0),
+        sa.Column("absorbed_listings_count", sa.Integer(), default=0),
+        sa.Column("avg_days_on_market", sa.Float(), nullable=True),
+        sa.Column("occupancy_rate", sa.Float(), nullable=True),
+        sa.Column("deals_closed", sa.Integer(), default=0),
+        sa.Column("avg_deal_price_per_sqm", sa.Float(), nullable=True),
+        sa.Column("avg_lease_term_months", sa.Float(), nullable=True),
+        sa.Column("details_json", sa.JSON(), default={}),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index("ix_market_snapshots_id", "market_snapshots", ["id"])
+    op.create_index("ix_market_city_type_date", "market_snapshots", ["city", "property_type", "snapshot_date"])
 
 
 def downgrade() -> None:
-    op.drop_table('alerts')
-    op.drop_table('job_runs')
-    op.drop_table('investor_watchlists')
-    op.drop_table('repo_queue')
-    op.drop_table('deep_snapshots')
-    op.drop_table('discovery_snapshots')
-    op.drop_table('repos')
+    op.drop_table("market_snapshots")
+    op.drop_table("favorites")
+    op.drop_table("tours")
+    op.drop_table("deals")
+    op.drop_table("listings")
+    op.drop_table("property_units")
+    op.drop_table("properties")
+    op.drop_table("users")
